@@ -65,7 +65,6 @@ def r_ply(type_):
 @Client.on_message(
     filters.command("playlist")
     & filters.group
-    & ~ filters.edited
 )
 async def playlist(client, message):
     global que
@@ -89,7 +88,8 @@ async def playlist(client, message):
             usr = song[1].mention(style='md')
             msg += f'\n- {name}'
             msg += f'\n- Requested by {usr}\n'
-    await message.reply_text(msg)       
+    await message.reply_text(msg)    
+  
 
 @Client.on_message(
     filters.command("current")

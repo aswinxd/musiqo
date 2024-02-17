@@ -261,21 +261,21 @@ async def m_cb(b, cb):
     chat_id = cb.message.chat.id
     m_chat = cb.message.chat
     the_data = cb.message.reply_markup.inline_keyboard[1][0].callback_data
-    elif type_ == 'pause':
-    if (chat_id not in callsmusic.pytgcalls.active_calls) or (callsmusic.pytgcalls.active_calls[chat_id] == 'paused'):
-        await cb.answer('Chat is not connected!', show_alert=True)
-    else:
-        callsmusic.pytgcalls.pause_stream(chat_id)
-        await cb.answer('Music Paused!')
-        await cb.message.edit(updated_stats(m_chat, qeue), reply_markup=r_ply('play'))
+    
+    if type_ == 'pause':
+        if (chat_id not in callsmusic.pytgcalls.active_calls) or (callsmusic.pytgcalls.active_calls[chat_id] == 'paused'):
+            await cb.answer('Chat is not connected!', show_alert=True)
+        else:
+            callsmusic.pytgcalls.pause_stream(chat_id)
+            await cb.answer('Music Paused!')
+            await cb.message.edit(updated_stats(m_chat, qeue), reply_markup=r_ply('play'))
+            
     elif type_ == 'play':
-    if (chat_id not in callsmusic.pytgcalls.active_calls) or (callsmusic.pytgcalls.active_calls[chat_id] == 'playing'):
-        await cb.answer('Chat is not connected!', show_alert=True)
-    else:
-        callsmusic.pytgcalls.resume_stream(chat_id)
-        await cb.answer('Music Resumed!')
-        await cb.message.edit(updated_stats(m_chat, qeue), reply_markup=r_ply('pause'))
-
+        if (chat_id not in callsmusic.pytgcalls.active_calls) or (callsmusic.pytgcalls.active_calls[chat_id] == 'playing'):
+            await cb.answer('Chat is not connected!', show_alert=True)
+        else:
+            callsmusic.pytgcalls.resume_stream(chat_id)
+            await cb.answer('Music Resumed!')
             await cb.message.edit(updated_stats(m_chat, qeue), reply_markup=r_ply('pause'))
 
                      

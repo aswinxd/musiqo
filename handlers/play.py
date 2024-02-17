@@ -1,47 +1,18 @@
-from os import path
-from typing import Dict
-from pyrogram import Client
-from pyrogram.types import Message, Voice
+import os
 from typing import Callable, Coroutine, Dict, List, Tuple, Union
-from callsmusic import callsmusic, queues
-from helpers.admins import get_administrators
-from os import path
 import requests
 import aiohttp
 import youtube_dl
 from youtube_search import YoutubeSearch
-from pyrogram import filters, emoji
-from pyrogram.types import InputMediaPhoto
-from pyrogram.errors.exceptions.bad_request_400 import ChatAdminRequired
-from pyrogram.errors.exceptions.flood_420 import FloodWait
-import traceback
-import os
-import sys
-from callsmusic.callsmusic import client as USER
-from pyrogram.errors import UserAlreadyParticipant
-import converter
-from downloader import youtube
-from config import BOT_NAME as bn, DURATION_LIMIT
-from helpers.filters import command, other_filters
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from callsmusic import callsmusic, queues
+from helpers.admins import get_administrators
 from helpers.decorators import errors, authorized_users_only
-from helpers.errors import DurationLimitError
-from helpers.gets import get_url, get_file_name
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from MusiqoRobot.musiqo import admins as a
-import os
-import aiohttp
-import aiofiles
-import ffmpeg
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
-from config import que
-from Python_ARQ import ARQ
-import json
-import wget
-chat_id = None
+from config import BOT_NAME as bn, DURATION_LIMIT
+from helpers.filters import other_filters
 
-           
+chat_id = None
 
 def cb_admin_check(func: Callable) -> Callable:
     async def decorator(client, cb):
@@ -51,71 +22,45 @@ def cb_admin_check(func: Callable) -> Callable:
         else:
             await cb.answer('You ain\'t allowed!', show_alert=True)
             return
-    return decorator                                                                       
+    return decorator
 
-#transcoder                                                                                
+# SETTINGS---------------- read before editing 
 
-def transcode(filename):
-    ffmpeg.input(filename).output("input.raw", format='s16le', acodec='pcm_s16le', ac=2, ar='48k').overwrite_output().run() 
-    os.remove(filename)
+def updated_stats(chat, queue, vol=100):
+    if chat.id in callsmusic.pytgcalls.active_calls:
+        stats = 'Settings of **{}**'.format(chat.title)
+        if len(queue) > 0:
+            stats += '\n\n'
+            stats += 'Volume : {}%\n'.format(vol)
+            stats += 'Songs in playlist : `{}`\n'.format(len(queue))
+            stats += 'now playing : **{}**\n'.format(queue[0][0])
+            stats += 'requested by : {}'.format(queue[0][1].mention)
+    else:
+        stats = None
+    return stats
 
-# Convert seconds to mm:ss
-
-def convert_seconds(seconds):
-    seconds = seconds % (24 * 3600)
-    seconds %= 3600
-    minutes = seconds // 60
-    seconds %= 60
-    return "%02d:%02d" % (minutes, seconds)
-
-# Convert hh:mm:ss to seconds
-
-def time_to_seconds(time):
-    stringt = str(time)
-    return sum(int(x) * 60 ** i for i, x in enumerate(reversed(stringt.split(':'))))
-
-# Change image size
-
-def changeImageSize(maxWidth, maxHeight, image):
-    widthRatio = maxWidth / image.size[0]
-    heightRatio = maxHeight / image.size[1]
-    newWidth = int(widthRatio * image.size[0])
-    newHeight = int(heightRatio * image.size[1])
-    newImage = image.resize((newWidth, newHeight))
-    return newImage
-
-async def generate_cover(requested_by, title, views, duration, thumbnail):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(thumbnail) as resp:
-            if resp.status == 200:
-                f = await aiofiles.open("background.png", mode="wb")
-                await f.write(await resp.read())
-                await f.close()
-
-    image1 = Image.open("./background.png")
-    image2 = Image.open("image/Musiqo.png")
-    image3 = changeImageSize(1280, 720, image1)
-    image4 = changeImageSize(1280, 720, image2)
-    image5 = image3.convert("RGBA")
-    image6 = image4.convert("RGBA")
-    Image.alpha_composite(image5, image6).save("temp.png")
-    img = Image.open("temp.png")
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("image/font.otf", 32)
-    draw.text((205, 550), f"Song title:- {title}", (51, 215, 255), font=font)
-    draw.text(
-        (205, 590), f"Song duration:- {duration}", (255, 255, 255), font=font
+def r_ply(type_):
+    if type_ == 'play':
+        ico = 'play'
+    else:
+        ico = 'play'
+    mar = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton('⏺️', 'Leave'),
+                InlineKeyboardButton('⏸️', 'Pause'),
+                InlineKeyboardButton('▶️', 'Resume'),
+                InlineKeyboardButton('⏩', 'Skip')            
+            ],
+            [
+                InlineKeyboardButton('Playlist', 'playlist')
+            ],
+            [       
+                InlineKeyboardButton("Close Menu",'cls')
+            ]        
+        ]
     )
-    draw.text((205, 630), f"Song views:- {views}", (255, 255, 255), font=font)
-    draw.text((205, 670),
-        f"Playing for:- {requested_by}",
-        (255, 255, 255),
-        font=font,
-    )
-    img.save("final.png")
-    os.remove("temp.png")
-    os.remove("background.png")
- 
+    return mar
 
 @Client.on_message(
     filters.command("playlist")
@@ -146,53 +91,11 @@ async def playlist(client, message):
             msg += f'\n- Requested by {usr}\n'
     await message.reply_text(msg)       
 
-    
-
-#SETTINGS---------------- read before editing 
-
-def updated_stats(chat, queue, vol=100):
-    if chat.id in callsmusic.pytgcalls.active_calls:
-    #if chat.id in active_chats:
-        stats = 'Settings of **{}**'.format(chat.title)
-        if len(que) > 0:
-            stats += '\n\n'
-            stats += 'Volume : {}%\n'.format(vol)
-            stats += 'Songs in playlist : `{}`\n'.format(len(que))
-            stats += 'now playing : **{}**\n'.format(queue[0][0])
-            stats += 'requested by : {}'.format(queue[0][1].mention)
-    else:
-        stats = None
-    return stats
-def r_ply(type_):
-    if type_ == 'play':
-        ico = 'play'
-    else:
-        ico = 'play'
-    mar = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton('⏺️', 'Leave'),
-                InlineKeyboardButton('⏸️', 'Pause'),
-                InlineKeyboardButton('▶️', 'Resume'),
-                InlineKeyboardButton('⏩', 'Skip')            
-            ],
-            [
-                InlineKeyboardButton('Playlist', 'playlist')
-            ],
-            [       
-                InlineKeyboardButton("Close Menu",'cls')
-            ]        
-        ]
-    )
-    return mar
-
 @Client.on_message(
-
     filters.command("current")
     & filters.group
     & ~ filters.edited
 )
-
 async def ee(client, message):
     queue = que.get(message.chat.id)
     stats = updated_stats(message.chat, queue)
@@ -458,8 +361,7 @@ async def m_cb(b, cb):
 
             await cb.answer('Chat is not connected!', show_alert=True)
 
-@Client.on_message(command("play") & other_filters)
-
+@Client.on_message(filters.command("play") & other_filters)
 async def play(_, message: Message):
 
     global que
